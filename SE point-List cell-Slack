@@ -1,0 +1,121 @@
+#!/usr/bin/env tclsh
+ 
+# Đọc file input
+set report_file [read [open [lindex $argv 0] "r"]]
+set outfp [open "lab2.3.4.output.txt" w]
+ 
+set invbuff_keys {BUFF INV}
+ 
+set start_cell ""
+set end_cell ""
+set in_path 0
+set last_cell ""
+ 
+set total_path 0
+set count_logic 0
+set count_invbuff 0
+set logic_list {}
+set invbuff_list {}
+ 
+foreach line [split $report_file "\n"] {
+    set line [string trim $line]
+    if {$line eq ""} continue
+ 
+    regsub -all {\s+} $line " " clean
+    set tokens [split $clean " "]
+    set col1 [lindex $tokens 0]
+    set col2 [lindex $tokens 1]
+ 
+    # STARTPOINT
+    if {[string match *Startpoint* $line]} {
+        regsub {\(.*$} [lindex $tokens 1] "" start_cell
+        puts $outfp "Startpoint: $start_cell"
+        puts "Startpoint: $start_cell"
+        set in_path 1
+        set last_cell ""
+        set count_logic 0
+        set count_invbuff 0
+        set logic_list {}
+        set invbuff_list {}
+        continue
+    }
+ 
+    # ENDPOINT (chỉ gán biến)
+    if {[string match *Endpoint* $line]} {
+        regsub {\(.*$} [lindex $tokens 1] "" end_cell
+        continue
+    }
+ 
+    # PATH CONTENT
+    if {$in_path} {
+ 
+        # Slack → kết thúc path
+        if {[string match *slack* $line]} {
+            set slack_val [lindex $tokens end]
+ 
+            # In logic cells
+            puts $outfp "Total Logic Cells: $count_logic"
+            puts "Total Logic Cells: $count_logic"
+            foreach cell $logic_list {
+                puts $outfp $cell
+                puts $cell
+            }
+ 
+            # In INV/BUFF cells
+            puts $outfp "Total INV/BUFF Cells: $count_invbuff"
+            puts "Total INV/BUFF Cells: $count_invbuff"
+            foreach cell $invbuff_list {
+                puts $outfp $cell
+                puts $cell
+            }
+ 
+            # In slack
+            puts $outfp "slack: $slack_val"
+            puts "slack: $slack_val"
+ 
+            puts ""
+            puts $outfp ""
+ 
+            set in_path 0
+            continue
+        }
+ 
+        # Bỏ dòng không chứa /
+        if {![string match */* $col1]} continue
+        # Bỏ dòng chứa net
+        if {[string match *net* $col2]} continue
+ 
+        # Lấy cell name trước dấu / cuối cùng
+        set lastSlash [string last "/" $col1]
+        if {$lastSlash <= 0} continue
+        set cell_name [string range $col1 0 [expr {$lastSlash - 1}]]
+ 
+        # Bỏ trùng liền kề
+        if {$cell_name eq $last_cell} continue
+        set last_cell $cell_name
+ 
+        # Bỏ startpoint
+        if {$cell_name eq $start_cell} continue
+ 
+        # Kiểm tra INV/BUFF
+        set is_invbuff 0
+        foreach key $invbuff_keys {
+            if {[string match *$key* $col2]} {
+                set is_invbuff 1
+                break
+            }
+        }
+ 
+        # Ghi vào danh sách + tăng đếm
+        if {$is_invbuff} {
+            incr count_invbuff
+            lappend invbuff_list $cell_name
+        } else {
+            incr count_logic
+            lappend logic_list $cell_name
+        }
+    }
+}
+ 
+close $outfp
+puts "Done!"
