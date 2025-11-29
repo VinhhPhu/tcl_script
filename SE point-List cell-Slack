@@ -28,7 +28,8 @@ foreach line [split $report_file "\n"] {
 
     # STARTPOINT
     if {[string match *Startpoint* $col1]} {
-        regsub {\(.*$} [lindex $tokens 1] "" start_cell
+   #     regsub {\(.*$} [lindex $tokens 1] "" start_cell
+        set start_cell $col2
         puts $outfp "Startpoint: $start_cell"
         puts "Startpoint: $start_cell"
         set in_path 1
@@ -41,8 +42,9 @@ foreach line [split $report_file "\n"] {
     }
 
     # ENDPOINT (chỉ gán biến)
-    if {[string match *Endpoint* $line]} {
-        regsub {\(.*$} [lindex $tokens 1] "" end_cell
+    if {[string match *Endpoint* $col1]} {
+        #regsub {\(.*$} [lindex $tokens 1] "" end_cell
+        set end_cell $col2
         puts $outfp "Endpoint: $end_cell"
         puts "Endpoint: $end_cell"
         continue
@@ -52,7 +54,7 @@ foreach line [split $report_file "\n"] {
     if {$in_path} {
 
         # Slack → kết thúc path
-        if {[string match *slack* $line]} {
+        if {[string match *slack* $col1]} {
             set slack_val [lindex $tokens end]
 
             # In logic cells
@@ -112,10 +114,10 @@ foreach line [split $report_file "\n"] {
         # Ghi vào danh sách + tăng đếm
         if {$is_invbuff} {
             incr count_invbuff
-            lappend invbuff_list $cell_name
+            lappend invbuff_list [concat $cell_name $col2]
         } else {
             incr count_logic
-            lappend logic_list $cell_name
+            lappend logic_list [concat $cell_name $col2]
         }
     }
 }
