@@ -2,7 +2,7 @@
 
 # Đọc file input
 set report_file [read [open [lindex $argv 0] "r"]]
-set outfp [open "lab2.3.4.output.txt" w]
+set outfp [open "3.4.output.txt" w]
 
 set invbuff_keys {BUFF INV}
 
@@ -27,7 +27,7 @@ foreach line [split $report_file "\n"] {
     set col2 [lindex $tokens 1]
 
     # STARTPOINT
-    if {[string match *Startpoint* $line]} {
+    if {[string match *Startpoint* $col1]} {
         regsub {\(.*$} [lindex $tokens 1] "" start_cell
         puts $outfp "Startpoint: $start_cell"
         puts "Startpoint: $start_cell"
