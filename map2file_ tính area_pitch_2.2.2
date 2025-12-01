@@ -1,0 +1,61 @@
+#!/usr/bin/env tclsh
+
+# ----- Đọc file input -----
+set module_text [read [open [lindex $argv 0] "r"]]
+set report_text [read [open [lindex $argv 1] "r"]]
+set outfp [open "lab2.2.2.output.txt" "w"]
+
+# ----- Keywords nhận dạng cell -----
+set cell_keywords {ELVT ULVT ULVTLL LVT LVTLL SVT CNOD}
+
+# ----- Trích danh sách cell từ module.v -----
+set cell_list {}
+
+foreach line [split $module_text "\n"] {
+    set line [string trim $line]
+    if {$line eq ""} continue
+
+    foreach key $cell_keywords {
+        if {[string match *$key* $line]} {
+            lappend cell_list [lindex $line 0]
+            break
+        }
+    }
+}
+
+# ----- Map cell → area từ report.rpt -----
+set cell_area_map {}
+
+foreach line [split $report_text "\n"] {
+    set line [string trim $line]
+    if {$line eq ""} continue
+
+    # Chuẩn hóa khoảng trắng
+    regsub -all {\s+} $line " " clean
+    set tokens [split $clean " "]
+
+    # Cột thứ 6 phải là số
+    if {![string is double -strict [lindex $tokens 5]]} continue
+
+    dict set cell_area_map [lindex $tokens 0] [lindex $tokens 5]
+}
+
+# ----- Tính diện tích thiết kế -----
+set total_area 0
+
+foreach cell $cell_list {
+    if {[dict exists $cell_area_map $cell]} {
+        set area [dict get $cell_area_map $cell]
+    } else {
+        set area 0.0
+    }
+
+    puts "$cell $area"
+    puts $outfp "$cell $area"
+    set total_area [expr {$total_area + $area}]
+}
+
+puts "Total area: $total_area"
+puts $outfp "Total area: $total_area"
+
+close $outfp
