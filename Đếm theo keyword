@@ -1,0 +1,63 @@
+#!/usr/bin/env tclsh
+
+# 2) [Awk&Tcl] Suppose memory cell has <digits>x<digits> keyword (64x176), how many memory cells - column 1
+# 1) [Tcl] How many total cells in this netlist file - column 1
+# 1) [Tcl] How many unique cells in timing report file - column 1 2
+# 2) [Tcl] How many violated timing paths - column 2
+
+set data [read [open [lindex $argv 0] "r"]]
+set outfp [open "lab_4Q.output.txt" w]
+
+#set cell_keywords {[0-9]x[0-9]}
+#set cell_keywords {ELVT ULVT ULVTLL LVT LVTLL SVT CNOD}
+set cell_keywords {/}
+#set cell_keywords {VIOLATED}
+
+set count 0
+
+foreach line [split $data "\n"] {
+
+    set line [string trim $line]
+    if {$line eq ""} { continue }
+    regsub -all {\s+} $line " " clean
+    set tokens [split $clean " "]
+
+    # Reset biến để tránh lỗi
+    set cell ""
+    set col2 ""
+
+    set col1 [lindex $tokens 0]
+    set col2 [lindex $tokens 1]
+
+    if {[string match *net* $col2]} {continue}
+
+    foreach key $cell_keywords {
+        if {[string match *$key* $col1]} {
+        set cell $col1
+            break
+        }
+    }
+
+ set lastSlash [string last "/" $cell]
+ set cell_name [string range $cell 0 [expr {$lastSlash - 1}]]
+
+    # Kiểm tra cell không rỗng
+    if {$cell ne ""} {
+
+         puts $cell
+        #puts "$cell $col2"
+
+        lappend output_list "$cell_name $col2"
+
+        incr count
+    }
+}
+
+set unique_sorted_list [lsort -dictionary -unique $output_list]
+puts [join $unique_sorted_list "\n"]
+puts $outfp "[join $unique_sorted_list "\n"]"
+puts "Total cells found: [llength $unique_sorted_list]"
+
+
+#puts "Total cells found: $count"
+close $outfp
