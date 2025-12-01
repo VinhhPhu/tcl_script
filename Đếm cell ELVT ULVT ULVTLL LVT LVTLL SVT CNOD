@@ -1,0 +1,37 @@
+#!/usr/bin/env tclsh
+
+# Đọc toàn bộ file input
+set report_file [read [open [lindex $argv 0] "r"]]
+
+# Mở file output
+set outfp [open "lab2.2.1.output.txt" w]
+
+# Keywords
+set cell_keywords {ELVT ULVT ULVTLL LVT LVTLL SVT CNOD}
+
+# Biến đếm tổng
+set total_cells 0
+
+# Duyệt từng dòng
+foreach line [split $report_file "\n"] {
+    set line [string trim $line]
+    foreach key $cell_keywords {
+        if {[string match *$key* $line]} {
+            # Lấy token đầu tiên làm celltype
+            set cell [lindex [split $line " "] 0]
+        puts $outfp $cell
+
+        incr total_cells
+
+            puts $cell
+            break
+
+
+        }
+    }
+}
+
+
+puts $outfp "total cells: $total_cells"
+
+puts "Done. Total cells: $total_cells"
