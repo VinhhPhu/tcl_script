@@ -1,0 +1,94 @@
+#!/usr/bin/env tclsh
+
+# Đọc file input
+set report_file [read [open [lindex $argv 0] r]]
+set outfp [open "lab2.3.5.output.txt" w]
+
+# Array lưu dữ liệu theo key "Scenario|StartCLK|EndCLK"
+array set data {}
+
+# Các biến tạm
+set cur_scenario ""
+set cur_start ""
+set cur_end ""
+set cur_edge ""
+
+foreach line [split $report_file "\n"] {
+    set line [string trim $line]
+    if {$line eq ""} continue
+
+    # ===== Scenario =====
+    if {[string match *Scenario* $line]} {
+        set tokens [split $line " "]
+        set cur_scenario [lindex $tokens 1]
+        continue
+    }
+
+    # ===== Startpoint =====
+    if {[string match *Startpoint* $line]} {
+        if {[regexp {clocked by (\S*CLK)} $line match clk]} {
+            set cur_start $clk
+        }
+        continue
+    }
+
+    # ===== Endpoint =====
+    if {[string match *Endpoint* $line]} {
+        if {[regexp {clocked by (\S*CLK)} $line match clk]} {
+            set cur_end $clk
+        }
+        continue
+    }
+
+    # ===== Slack =====
+    if {[string match *slack* $line]} {
+        set tokens [split $line " "]
+        set slack_val [lindex $tokens end]
+        set key "$cur_scenario|$cur_start|$cur_end"
+
+        # Nếu key chưa tồn tại → khởi tạo dict đầy đủ
+        if {![info exists data($key)]} {
+            set data($key) [dict create WNS $slack_val TNS $slack_val NVP [expr {$slack_val < 0 ? 1 : 0}]]
+        } else {
+            # Cập nhật dict
+            set d $data($key)
+
+            # WNS = slack âm nhất
+            if {$slack_val < [dict get $d WNS]} { dict set d WNS $slack_val }
+
+            # TNS = tổng slack
+            dict set d TNS [expr {[dict get $d TNS] + $slack_val}]
+
+            # NVP = số đường slack âm
+            if {$slack_val < 0} {
+                dict set d NVP [expr {[dict get $d NVP] + 1}]
+            }
+
+            # Lưu lại
+            set data($key) $d
+        }
+        continue
+    }
+}
+
+# ===== Xuất kết quả =====
+foreach key [lsort [array names data]] {
+    set parts [split $key "|"]
+    set scenario [lindex $parts 0]
+    set startclk [lindex $parts 1]
+    set endclk [lindex $parts 2]
+
+    set d $data($key)
+    set WNS [dict get $d WNS]
+    set TNS [dict get $d TNS]
+    set NVP [dict get $d NVP]
+
+    puts $outfp "Scenario: $scenario"
+    puts $outfp "Startpoint: $startclk  Endpoint: $endclk $WNS/$TNS/$NVP"
+
+    # ===== Thêm 1 dòng trống sau mỗi scenario =====
+    puts $outfp ""
+}
+
+close $outfp
+puts "Done!"
