@@ -2,14 +2,13 @@
 
 # Đọc file input
 set report_file [read [open [lindex $argv 0] "r"]]
-set outfp [open "3.4.output.txt" w]
+set outfp [open "lab2.3.4.output.txt" w]
 
 set invbuff_keys {BUFF INV}
 
 set start_cell ""
 set end_cell ""
-set in_path 0           ;# flag: đang ở trong 1 timing path
-set process_cells 0     ;# flag: bắt đầu xử lý cell khi gặp Startpoint
+set in_path 0
 set last_cell ""
 
 set total_path 0
@@ -29,12 +28,10 @@ foreach line [split $report_file "\n"] {
 
     # STARTPOINT
     if {[string match *Startpoint* $col1]} {
-        set start_cell $col2
+        regsub {\(.*$} [lindex $tokens 1] "" start_cell
         puts $outfp "Startpoint: $start_cell"
         puts "Startpoint: $start_cell"
-
         set in_path 1
-        set process_cells 0
         set last_cell ""
         set count_logic 0
         set count_invbuff 0
@@ -43,9 +40,9 @@ foreach line [split $report_file "\n"] {
         continue
     }
 
-    # ENDPOINT
-    if {[string match *Endpoint* $col1]} {
-        set end_cell $col2
+    # ENDPOINT (chỉ gán biến)
+    if {[string match *Endpoint* $line]} {
+        regsub {\(.*$} [lindex $tokens 1] "" end_cell
         puts $outfp "Endpoint: $end_cell"
         puts "Endpoint: $end_cell"
         continue
@@ -55,7 +52,8 @@ foreach line [split $report_file "\n"] {
     if {$in_path} {
 
         # Slack → kết thúc path
-        if {[string match *slack* $col1]} {
+        if {[string match *slack* $line]} {
+            set slack_val [lindex $tokens end]
 
             # In logic cells
             puts $outfp "Total Logic Cells: $count_logic"
@@ -74,16 +72,13 @@ foreach line [split $report_file "\n"] {
             }
 
             # In slack
-            set slack_val [lindex $tokens end]
             puts $outfp "slack: $slack_val"
             puts "slack: $slack_val"
-
             incr total_path
             puts ""
             puts $outfp ""
 
             set in_path 0
-            set process_cells 0
             continue
         }
 
@@ -92,35 +87,20 @@ foreach line [split $report_file "\n"] {
         # Bỏ dòng chứa net
         if {[string match *net* $col2]} continue
 
-        # Lấy cell name từ col1
+        # Lấy cell name trước dấu / cuối cùng
         set lastSlash [string last "/" $col1]
         if {$lastSlash <= 0} continue
         set cell_name [string range $col1 0 [expr {$lastSlash - 1}]]
-
-        # -----------------------------
-        # BẮT ĐẦU xử lý khi gặp Startcell
-        # -----------------------------
-        if {$cell_name eq $start_cell} {
-            set process_cells 1
-            continue
-        }
-
-        # -----------------------------
-        # DỪNG xử lý khi gặp Endcell
-        # -----------------------------
-        if {$cell_name eq $end_cell} {
-            set process_cells 0
-            continue
-        }
-
-        # Chỉ xử lý khi đang trong đoạn giữa
-        if {!$process_cells} continue
 
         # Bỏ trùng liền kề
         if {$cell_name eq $last_cell} continue
         set last_cell $cell_name
 
-        # Check INV/BUFF
+        # Bỏ startpoint
+        if {$cell_name eq $start_cell} continue
+        if {$cell_name eq $end_cell} continue
+
+        # Kiểm tra INV/BUFF
         set is_invbuff 0
         foreach key $invbuff_keys {
             if {[string match *$key* $col2]} {
@@ -129,18 +109,16 @@ foreach line [split $report_file "\n"] {
             }
         }
 
-        set out_line "$cell_name    $col2"
-
+        # Ghi vào danh sách + tăng đếm
         if {$is_invbuff} {
             incr count_invbuff
-            lappend invbuff_list $out_line
+            lappend invbuff_list $cell_name
         } else {
             incr count_logic
-            lappend logic_list $out_line
+            lappend logic_list $cell_name
         }
     }
 }
-
 puts $outfp "Total timing path: $total_path"
 close $outfp
 puts "Done!"
