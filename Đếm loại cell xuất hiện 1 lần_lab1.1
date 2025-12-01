@@ -31,7 +31,8 @@ foreach line [split $data "\n"] {
     if {![regexp {^(.*)ULVT$} $col2_clean match type_clean]} {
         continue
     }
- 
+ #
+   #if {![regexp {^(.*)(?:ULVT|ELVT)$} $col2_clean match type_clean]} { continue }
     # ===== Lấy cell_name =====
     set lastSlash [string last "/" $col1]
     set cell_name [string range $col1 0 [expr {$lastSlash - 1}]]
