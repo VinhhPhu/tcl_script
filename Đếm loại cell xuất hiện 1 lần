@@ -1,0 +1,52 @@
+#!/usr/bin/env tclsh
+set data [read [open [lindex $argv 0] "r"]]
+set outfp [open "lab2.2.1.output.txt" w]
+ 
+set count 0
+set output_list {}
+ 
+foreach line [split $data "\n"] {
+ 
+    set line [string trim $line]
+    if {$line eq ""} { continue }
+ 
+    regsub -all {\s+} $line " " clean
+    set tokens [split $clean " "]
+ 
+    # Lấy 2 cột đầu
+    set col1 [lindex $tokens 0]
+    set col2 [lindex $tokens 1]
+ 
+    # Chỉ xử lý nếu col1 chứa "/"
+    if {![string match */* $col1]} {
+        continue
+    }
+ 
+    # ===== MATCH CHUẨN: phía trước chuỗi, phía sau cùng ULVT) =====
+    # Ví dụ: (ABC123ULVT)
+    # Bỏ dấu ngoặc để regex chính xác
+    regsub -all {\(|\)} $col2 "" col2_clean
+ 
+    # Regex lấy phần phía trước ULVT)
+    if {![regexp {^(.*)ULVT$} $col2_clean match type_clean]} {
+        continue
+    }
+ 
+    # ===== Lấy cell_name =====
+    set lastSlash [string last "/" $col1]
+    set cell_name [string range $col1 0 [expr {$lastSlash - 1}]]
+ 
+    # Lưu kết quả
+    lappend output_list "$cell_name $type_clean"
+    incr count
+}
+ 
+# SORT + UNIQUE
+set unique_sorted_list [lsort -dictionary -unique $output_list]
+ 
+puts [join $unique_sorted_list "\n"]
+puts $outfp "[join $unique_sorted_list "\n"]"
+ 
+puts "Total cells found (after unique): [llength $unique_sorted_list]"
+ 
+close $outfp
