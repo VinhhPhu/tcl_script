@@ -1,0 +1,42 @@
+#!/usr/bin/env tclsh
+
+# Đọc file input
+set report_file [read [open [lindex $argv 0] r]]
+set outfp [open "cell_info_addon.rpt" w]
+
+foreach line [split $report_file "\n"] {
+    set line [string trim $line]
+    if {$line eq ""} { continue }
+
+    # Chuẩn hóa khoảng trắng thành 1 space
+    regsub -all {\s+} $line " " clean
+
+    # Tách cột
+    set tokens [split $clean " "]
+
+    # Kiểm tra dòng dữ liệu (cột 2 và 3 phải là số)
+    if {![string is double -strict [lindex $tokens 1]] || ![string is double -strict [lindex $tokens 2]]} {
+        # Không phải dòng dữ liệu, ghi nguyên line
+        puts $outfp $line
+        continue
+    }
+
+    set col1 [lindex $tokens 0]
+    set width [expr {[lindex $tokens 1]}]
+    set height [expr {[lindex $tokens 2]}]
+
+    # Lấy Pitch từ tên cell: nhận diện P, trước P có dạng số+H+số, giá trị số sau P
+    set pitch 1.0  ;# default nếu không tìm thấy
+    if {[regexp {H(\d+)P(\d+)} $col1 -> _dummy pitch_val]} {
+        set pitch [expr {double($pitch_val)/1000.0}]
+    }
+
+    # Tính toán
+    set num_pitch [expr {$width / $pitch}]
+    set cell_area [expr {$width * $height}]
+
+    # Ghi ra file: cột 5 = Number Pitch, cột 6 = Cell Area
+    puts $outfp "$col1 $width $height [lindex $tokens 3] $num_pitch $cell_area"
+}
+
+close $outfp
