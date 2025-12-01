@@ -1,0 +1,80 @@
+#!/usr/bin/env tclsh
+
+# ----- File input -----
+set module_file [lindex $argv 0]
+set report_file [lindex $argv 1]
+
+set module_text [read [open $module_file r]]
+set report_text [read [open $report_file r]]
+
+# ----- Keywords cell -----
+set cell_keywords {ELVT ULVT ULVTLL LVT LVTLL SVT CNOD}
+
+# ----- Tạo dict cell_name -> area từ report -----
+set cell_area_map {}
+
+foreach line [split $report_text "\n"] {
+    set line [string trim $line]
+    if {$line eq ""} { continue }
+    regsub -all {\s+} $line " " clean
+    set tokens [split $clean " "]
+    if {![string is double -strict [lindex $tokens 5]]} { continue }
+    set cellname [lindex $tokens 0]
+    set area [expr {[lindex $tokens 5]}]
+    dict set cell_area_map $cellname $area
+}
+
+# ----- Xử lý module -----
+set in_module 0
+set module_name ""
+set module_cells {}
+set outfp [open "lab2.2.3.output.txt" w]
+
+foreach line [split $module_text "\n"] {
+    set line [string trim $line]
+    if {$line eq ""} { continue }
+
+    # Bắt đầu module
+    if {[string match module\ * $line]} {
+        set in_module 1
+        set words [split $line " "]
+        set module_name [lindex $words 1]
+        set module_cells {}
+        continue
+    }
+
+    # Kết thúc module
+    if {$line eq "endmodule"} {
+        if {$in_module} {
+            # Tính tổng area và số cell
+            set total_area 0
+            foreach cell $module_cells {
+                if {[dict exists $cell_area_map $cell]} {
+                    set total_area [expr $total_area + [dict get $cell_area_map $cell]]
+                }
+            }
+            set cell_count [llength $module_cells]
+
+            # In thông tin module theo format cột -40
+            puts [format "%-100s %6d %10.4f" $module_name $cell_count $total_area]
+            puts $outfp [format "%-100s %6d %10.4f" $module_name $cell_count $total_area]
+        }
+        set in_module 0
+        set module_name ""
+        set module_cells {}
+        continue
+    }
+
+    # Nếu đang trong module, kiểm tra cell
+    if {$in_module} {
+        foreach key $cell_keywords {
+            if {[string match *$key* $line]} {
+                set cell_name [lindex [split $line " "] 0]
+                lappend module_cells $cell_name
+                break
+            }
+        }
+    }
+}
+
+close $outfp
