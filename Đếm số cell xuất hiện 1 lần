@@ -1,0 +1,49 @@
+#!/usr/bin/env tclsh
+
+set data [read [open [lindex $argv 0] "r"]]
+set outfp [open "lab2.2.1.output.txt" w]
+
+set cell_keywords {/}
+set count 0
+
+foreach line [split $data "\n"] {
+
+    set line [string trim $line]
+    if {$line eq ""} { continue }
+
+    regsub -all {\s+} $line " " clean
+    set tokens [split $clean " "]
+    # Reset biến để tránh lỗi
+    set cell ""
+   set col2 ""
+
+    set col1 [lindex $tokens 0]
+  set col2 [lindex $tokens 1]
+
+   if {[string match *net* $col2]} {
+         continue}
+
+    foreach key $cell_keywords {
+        if {[string match *$key* $col1]} {
+        set cell $col1
+            break
+        }
+    }
+        set lastSlash [string last "/" $cell]
+        set cell_name [string range $cell 0 [expr {$lastSlash - 1}]]
+
+# Kiểm tra cell không rỗ++ing
+   if {$cell_name ne ""} {
+#   puts "$out $col2"
+#        incr total_cells
+        lappend output_list "$cell_name $col2"
+        incr count
+    }
+}
+set unique_sorted_list [lsort -dictionary -unique $output_list]
+puts [join $unique_sorted_list "\n"]
+puts $outfp "[join $unique_sorted_list "\n"]"
+
+puts "Total cells found (after unique): [llength $unique_sorted_list]"
+
+close $outfp
