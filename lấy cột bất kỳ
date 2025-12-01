@@ -1,0 +1,29 @@
+#!/usr/bin/env tclsh
+
+set report_file [read [open [lindex $argv 0] r]]
+set outfp [open "col_1_6.output.txt" w]
+
+foreach line [split $report_file "\n"] {
+    set line [string trim $line]
+    if {$line eq ""} { continue }
+
+    # Chuẩn hóa khoảng trắng thành 1 space
+    regsub -all {\s+} $line " " clean
+
+    # Tách cột
+    set tokens [split $clean " "]
+
+    # Kiểm tra dòng header (cột 6 phải là số)
+    if {![string is double -strict [lindex $tokens 5]]} {
+        continue
+    }
+
+    # Cột 1 và cột 6
+    set col1 [lindex $tokens 0]
+    set col6 [lindex $tokens 5]
+
+    puts "$col1 $col6"
+    puts $outfp "$col1 $col6"
+}
+
+close $outfp
