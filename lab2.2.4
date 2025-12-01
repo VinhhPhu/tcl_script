@@ -1,0 +1,104 @@
+#!/usr/bin/env tclsh
+
+# ----- Read input files -----
+set module_text [read [open [lindex $argv 0] "r"]]
+set report_text [read [open [lindex $argv 1] "r"]]
+
+# ----- Output file -----
+set outfp [open "lab2.2.4.output.txt" "w"]
+
+# ----- Vth keywords -----
+set vth_keywords {ELVT ULVT ULVTLL LVT LVTLL SVT CNOD}
+
+# ----- Build cell_name → area dictionary from report -----
+set cell_area_map {}
+
+foreach line [split $report_text "\n"] {
+    set line [string trim $line]
+    if {$line eq ""} continue
+
+    # Normalize whitespace
+    regsub -all {\s+} $line " " clean
+    set tokens [split $clean " "]
+
+    # Column 6 must be numeric (area column)
+    if {![string is double -strict [lindex $tokens 5]]} continue
+
+    set cellname [lindex $tokens 0]
+    set area     [lindex $tokens 5]
+
+    dict set cell_area_map $cellname $area
+}
+
+# ----- Collect per-Vth statistics -----
+set vth_cell_count_map {}   ;# Vth → cell count
+set vth_area_map {}         ;# Vth → total area
+
+set total_cell 0
+set total_area 0.0
+
+foreach line [split $module_text "\n"] {
+    set line [string trim $line]
+    if {$line eq ""} continue
+
+    foreach key $vth_keywords {
+        if {[string match *$key* $line]} {
+
+            # Extract cell instance name
+            set cell_name [lindex $line 0]
+
+            # Update cell count
+            if {[dict exists $vth_cell_count_map $key]} {
+                dict set vth_cell_count_map $key \
+                    [expr {[dict get $vth_cell_count_map $key] + 1}]
+            } else {
+                dict set vth_cell_count_map $key 1
+            }
+
+            # Lookup area (0.0 if not found)
+            if {[dict exists $cell_area_map $cell_name]} {
+                set area [dict get $cell_area_map $cell_name]
+            } else {
+                set area 0.0
+            }
+
+            # Update area per Vth type
+            if {[dict exists $vth_area_map $key]} {
+                dict set vth_area_map $key \
+                    [expr {[dict get $vth_area_map $key] + $area}]
+            } else {
+                dict set vth_area_map $key $area
+            }
+
+            # Update global totals
+            incr total_cell
+            set total_area [expr {$total_area + $area}]
+
+            break
+        }
+    }
+}
+
+# ----- Print summary -----
+set header "Vth_type          Cell_count  Cell_count%   Total_area    Area%"
+puts $header
+puts $outfp $header
+
+foreach key $vth_keywords {
+    if {[dict exists $vth_cell_count_map $key]} {
+
+        set count [dict get $vth_cell_count_map $key]
+        set area  [dict get $vth_area_map $key]
+
+        set count_pct [expr {100.0 * $count / $total_cell}]
+        set area_pct  [expr {100.0 * $area  / $total_area}]
+
+        set line [format "%-15s %10d %10.2f%% %12.4f %8.2f%%" \
+                  $key $count $count_pct $area $area_pct]
+
+        puts $line
+        puts $outfp $line
+    }
+}
+
+close $outfp
