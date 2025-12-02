@@ -1,0 +1,56 @@
+#!/usr/bin/env tclsh
+
+# Đọc file input
+set data [read [open [lindex $argv 0] "r"]]
+set outfp [open "lab2.1.1.output.txt" w]
+
+# Khởi tạo biến đếm
+set elvt 0
+set ulvt 0
+set ulvtll 0
+set lvt 0
+set lvtll 0
+set svt 0
+set none 0
+
+foreach line [split $data "\n"] {
+
+    set line [string trim $line]
+    if {$line eq ""} { continue }
+
+    # Chuẩn hóa khoảng trắng
+    regsub -all {\s+} $line " " clean
+    set tokens [split $clean " "]
+
+    # Lấy cột 1 = cell name
+    set cell [lindex $tokens 0]
+    if {$cell eq ""} { continue }
+
+    # Bắt keyword ở cuối cell name
+    if {[regexp {(ELVT)$} $cell]} {
+        incr elvt
+    } elseif {[regexp {(ULVTLL)$} $cell]} {
+        incr ulvtll
+    } elseif {[regexp {(ULVT)$} $cell]} {
+        incr ulvt
+    } elseif {[regexp {(LVTLL)$} $cell]} {
+        incr lvtll
+    } elseif {[regexp {(LVT)$} $cell]} {
+        incr lvt
+    } elseif {[regexp {(SVT)$} $cell]} {
+        incr svt
+    } else {
+        incr none
+    }
+}
+
+# Ghi ra file output
+puts $outfp "Total ELVT cells:   $elvt"
+puts $outfp "Total ULVT cells:   $ulvt"
+puts $outfp "Total ULVTLL cells: $ulvtll"
+puts $outfp "Total LVT cells:    $lvt"
+puts $outfp "Total LVTLL cells:  $lvtll"
+puts $outfp "Total SVT cells:    $svt"
+puts $outfp "Total NONE cells:   $none"
+
+close $outfp
